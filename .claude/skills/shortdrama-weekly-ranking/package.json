@@ -1,0 +1,17 @@
+{
+  "name": "shortdrama-weekly-ranking",
+  "version": "1.0.3",
+  "description": "每周自动推送最新短剧/漫剧热度榜单，聚合搜狗微信搜索、36氪、虎嗅等多源数据。",
+  "main": "ranking.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["短剧榜单","短剧周榜","短剧排行榜","短剧热榜","短剧数据","微短剧榜单"],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "axios": "^1.15.2",
+    "cheerio": "^1.2.0"
+  }
+}

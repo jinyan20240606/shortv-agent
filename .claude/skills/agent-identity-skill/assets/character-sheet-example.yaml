@@ -1,0 +1,59 @@
+# ============================================================
+# Character Sheet — Example Template
+# ============================================================
+# This defines your character's visual identity.
+# Modify fields to match your character, then run proofs to verify.
+#
+# Tips:
+#   - hair.color is the most impactful field for consistency
+#   - signature_accessory helps AI "remember" who the character is
+#   - core_vibe controls age/maturity impression
+# ============================================================
+
+meta:
+  version: 2
+  created: "2026-04-07"
+  confirmed: false           # Set to true after verifying proof images
+
+# ── Core Identity ─────────────────────────────────────────
+identity:
+  name: "Your Character Name"
+  age_impression: "energetic young woman, early 20s"
+
+# ── Face ─────────────────────────────────────────────────
+# Tip: eyes + hair color are the two most important consistency anchors
+face:
+  eyes: "warm amber-golden eyes, bright and expressive"
+  skin: "light warm-toned skin with a healthy glow"
+
+hair:
+  color: "short silver-white hair with soft lavender tips"
+  style: "playful layered bob cut, slightly messy and windswept"
+  signature_accessory: "small golden star-shaped ear stud on the left ear"
+
+# ── Body ─────────────────────────────────────────────────
+# Tiered system: different detail levels for different shot types
+# Avoid: tall / model-like / slender (triggers unrealistic proportions)
+body:
+  height_ref: "162cm"
+  half_body:
+    base_type: "healthy petite feminine figure"
+    curve_template: "form-fitting {garment} that flatters her frame"
+  full_body:
+    base_type: "162cm healthy petite feminine figure with youthful energy"
+    curve_template: "form-fitting {garment} that flatters her frame"
+    legs_template: "showing slender legs"
+    stance_template: "lively natural posture"
+  loose_outfit_boost: "petite figure visible beneath clothing"
+
+# ── Personality ───────────────────────────────────────────
+# core_vibe directly affects perceived age and maturity
+personality:
+  core_vibe: "cheerful, energetic, warm"
+  default_expression: "a bright radiant smile with sparkling eyes full of curiosity"
+
+# ── Art Style ─────────────────────────────────────────────
+art_style:
+  base: "anime art style"
+  quality: "high quality, detailed, beautiful lighting"
+  maturity_suffix: "youthful vibrant style"
