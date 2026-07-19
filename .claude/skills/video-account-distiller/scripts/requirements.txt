@@ -1,0 +1,16 @@
+aiofiles
+loguru
+python-dotenv
+retry
+openpyxl
+urllib3
+PyExecJS
+requests
+argparse
+websockets
+websocket-client
+protobuf
+beautifulsoup4
+faster-whisper
+playwright
+python-docx
