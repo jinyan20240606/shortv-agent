@@ -21,7 +21,7 @@
 | 从头开始 / 怎么起号（定位已定） | 起号进度 | **定位已锁死在 `具体赛道文档`，别重跑定位。** 直接进 `具体赛道文档` 的 0 阶段筹备 → 1 阶段冷启动；第一个生产动作是「储备切片选题」，走选题链；女主形象走 `agent-identity-skill` |
 | 想选题 / 给方向 / 最近做什么 / 有没有爆点 | 选题 | `hotspot-radar` + `shortdrama-weekly-ranking`（热度地基）→ `viral-short-form-ideas`（系统出题）→ `laoxu-video-script`（母题库补充） |
 | 起标题 / 标题不行 / 换个标题 | 标题 | `viral-title-generator` |
-| 写钩子 / 开头留不住人 / 完播低 / 脚本 | 钩子·脚本 | `viral-short-form`（钩子原型+留存结构+掉粉诊断） |
+| 写钩子 / 开头留不住人 / 完播低 / 脚本 | 钩子·脚本 |  `viral-short-form`（钩子原型+留存结构+掉粉诊断） |
 | 拆解这条爆款 / 为什么它火 / 照着抄 | 拆解迭代 | `lingyi-wx-video-decomposer-exp` |
 | 最近什么短剧火 / 短剧题材 | 短剧找题材 | `shortdrama-weekly-ranking` |
 | 写短剧剧本 / 出大纲 / 人物小传 | 短剧出剧本 | `short-drama-scriptwriter` |
