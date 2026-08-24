@@ -1,8 +1,12 @@
 /**
- * 热点雷达 - 数据采集器 v4
- * 微博: 官方API
- * 知乎/抖音/B站: 洛樱云API
- * 小红书: 60s API (v2/rednote)
+ * 热点雷达 - 数据采集器 v5
+ * 微博: 官方API (weibo.com)
+ * B站: 官方API (api.bilibili.com)
+ * 抖音: 官方API (douyin.com)
+ * 知乎: 官方API (需 cookie 鉴权，通过环境变量 ZHI_HU_COOKIE 注入)
+ * 小红书: 官方API (需 cookie 鉴权，通过环境变量 XHS_COOKIE 注入)
+ *
+ * 注意：知乎/小红书官方接口需要登录 cookie；未提供 cookie 时返回空并标注数据源需鉴权。
  */
 
 const https = require('https');
@@ -18,10 +22,14 @@ const CONFIG = {
   API: {
     // 微博官方API
     WEIBO: 'https://weibo.com/ajax/statuses/hot_band',
-    // 洛樱云API - B站（知乎/抖音已迁移至 60s）
-    LUOYING: 'https://apiserver.alcex.cn/daily-hot/',
-    // 60s API - 知乎、抖音、小红书
-    SIXTYS: 'https://60s.viki.moe/v2/',
+    // B站官方排行榜API
+    BILIBILI: 'https://api.bilibili.com/x/web-interface/ranking/v2?rid=0&type=all',
+    // 抖音官方热搜API
+    DOUYIN: 'https://www.douyin.com/aweme/v1/web/hot/search/list/',
+    // 知乎官方热榜API（需 cookie）
+    ZHIHU: 'https://www.zhihu.com/api/v3/feed/topstory/hot-lists/total?limit=50&desktop=true',
+    // 小红书官方热榜API（需 cookie）
+    XIAOHONGSHU: 'https://edith.xiaohongshu.com/api/sns/web/v1/hot/search',
   }
 };
 
@@ -45,16 +53,17 @@ function ensureDirs() {
   });
 }
 
-// HTTP请求封装
+// HTTP请求封装（支持自定义 headers）
 function fetch(url, options) {
   return new Promise(function(resolve, reject) {
     var protocol = url.startsWith('https') ? https : require('http');
+    var headers = Object.assign({
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'application/json, text/plain, */*',
+    }, (options && options.headers) || {});
+
     var requestOptions = {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json, text/html',
-        'Referer': 'https://weibo.com',
-      },
+      headers: headers,
       timeout: 15000,
     };
 
@@ -62,10 +71,20 @@ function fetch(url, options) {
       var data = '';
       res.on('data', function(chunk) { data += chunk; });
       res.on('end', function() {
-        try {
-          resolve(JSON.parse(data));
-        } catch (e) {
-          resolve({ raw: data });
+        var contentType = res.headers['content-type'] || '';
+        if (contentType.indexOf('json') !== -1) {
+          try {
+            resolve(JSON.parse(data));
+          } catch (e) {
+            resolve({ raw: data });
+          }
+        } else {
+          // 非 JSON 响应，尝试解析，失败则返回原始内容标记
+          try {
+            resolve(JSON.parse(data));
+          } catch (e) {
+            resolve({ raw: data, statusCode: res.statusCode });
+          }
         }
       });
     }).on('error', function(err) {
@@ -78,7 +97,9 @@ function fetch(url, options) {
 async function fetchWeibo() {
   try {
     console.log('  [微博] 开始获取...');
-    var data = await fetch(CONFIG.API.WEIBO);
+    var data = await fetch(CONFIG.API.WEIBO, {
+      headers: { 'Referer': 'https://weibo.com' }
+    });
     var items = data.data && data.data.band_list ? data.data.band_list : [];
     var result = items.map(function(item, idx) {
       return {
@@ -97,45 +118,21 @@ async function fetchWeibo() {
   }
 }
 
-// 获取知乎热搜 - 使用洛樱云API
-async function fetchZhihu() {
-  try {
-    console.log('  [知乎] 开始获取...');
-    var data = await fetch(CONFIG.API.SIXTYS + 'zhihu');
-    if (data.code === 200 && data.data) {
-      var result = data.data.map(function(item, idx) {
-        return {
-          rank: idx + 1,
-          topic: item.title,
-          hotValue: item.hot_value_desc || 0,
-          label: '',
-          url: item.link || ''
-        };
-      });
-      console.log('  [知乎] 获取成功: ' + result.length + '条');
-      return result;
-    }
-    console.log('  [知乎] 接口返回异常');
-    return [];
-  } catch (e) {
-    console.log('  [知乎] 获取失败: ' + e.message);
-    return [];
-  }
-}
-
-// 获取B站热搜 - 使用洛樱云API
+// 获取B站热搜 - 官方排行榜API
 async function fetchBilibili() {
   try {
     console.log('  [B站] 开始获取...');
-    var data = await fetch(CONFIG.API.LUOYING + 'bilibili');
-    if (data.code === 200 && data.data) {
-      var result = data.data.map(function(item, idx) {
+    var data = await fetch(CONFIG.API.BILIBILI, {
+      headers: { 'Referer': 'https://www.bilibili.com/' }
+    });
+    if (data.code === 0 && data.data && Array.isArray(data.data.list)) {
+      var result = data.data.list.map(function(item, idx) {
         return {
           rank: idx + 1,
-          topic: item.title,
-          hotValue: item.hot || 0,
-          label: item.desc || '',
-          url: item.url || ''
+          topic: item.title || '',
+          hotValue: (item.stat && item.stat.view) || 0,
+          label: (item.tname) || '',
+          url: item.short_link_v2 || ('https://www.bilibili.com/video/' + item.bvid)
         };
       });
       console.log('  [B站] 获取成功: ' + result.length + '条');
@@ -149,19 +146,21 @@ async function fetchBilibili() {
   }
 }
 
-// 获取抖音热搜 - 使用洛樱云API
+// 获取抖音热搜 - 官方热搜API
 async function fetchDouyin() {
   try {
     console.log('  [抖音] 开始获取...');
-    var data = await fetch(CONFIG.API.SIXTYS + 'douyin');
-    if (data.code === 200 && data.data) {
-      var result = data.data.map(function(item, idx) {
+    var data = await fetch(CONFIG.API.DOUYIN, {
+      headers: { 'Referer': 'https://www.douyin.com/' }
+    });
+    if (data.data && Array.isArray(data.data.word_list)) {
+      var result = data.data.word_list.map(function(item, idx) {
         return {
-          rank: idx + 1,
-          topic: item.title,
+          rank: item.rank || idx + 1,
+          topic: item.word || '',
           hotValue: item.hot_value || 0,
-          label: '',
-          url: item.link || ''
+          label: item.label_name || '',
+          url: item.url || ''
         };
       });
       console.log('  [抖音] 获取成功: ' + result.length + '条');
@@ -175,25 +174,67 @@ async function fetchDouyin() {
   }
 }
 
-// 获取小红书热搜 - 使用60s API (v2)
+// 获取知乎热搜 - 官方API（需 cookie，从环境变量 ZHI_HU_COOKIE 注入）
+async function fetchZhihu() {
+  try {
+    console.log('  [知乎] 开始获取...');
+    var cookie = process.env.ZHI_HU_COOKIE || '';
+    if (!cookie) {
+      console.log('  [知乎] 跳过：未配置 ZHI_HU_COOKIE（官方接口需登录 cookie）');
+      return [];
+    }
+    var data = await fetch(CONFIG.API.ZHIHU, {
+      headers: { 'Referer': 'https://www.zhihu.com/hot', 'Cookie': cookie }
+    });
+    if (data.data && Array.isArray(data.data)) {
+      var result = data.data.map(function(item, idx) {
+        var target = item.target || {};
+        return {
+          rank: idx + 1,
+          topic: target.title || item.title || '',
+          hotValue: item.detail_text || 0,
+          label: item.detail_text || '',
+          url: target.url || ''
+        };
+      });
+      console.log('  [知乎] 获取成功: ' + result.length + '条');
+      return result;
+    }
+    console.log('  [知乎] 接口返回异常（cookie 可能失效或接口变更）');
+    return [];
+  } catch (e) {
+    console.log('  [知乎] 获取失败: ' + e.message);
+    return [];
+  }
+}
+
+// 获取小红书热搜 - 官方API（需 cookie，从环境变量 XHS_COOKIE 注入）
 async function fetchXiaohongshu() {
   try {
     console.log('  [小红书] 开始获取...');
-    var data = await fetch('https://60s.viki.moe/v2/rednote');
-    if (data.code === 200 && data.data) {
-      var result = data.data.map(function(item, idx) {
+    var cookie = process.env.XHS_COOKIE || '';
+    if (!cookie) {
+      console.log('  [小红书] 跳过：未配置 XHS_COOKIE（官方接口需登录 cookie）');
+      return [];
+    }
+    var data = await fetch(CONFIG.API.XIAOHONGSHU, {
+      headers: { 'Referer': 'https://www.xiaohongshu.com/', 'Cookie': cookie }
+    });
+    if (data.data && Array.isArray(data.data.items)) {
+      var result = data.data.items.map(function(item, idx) {
+        var note = item.note_card || item;
         return {
-          rank: item.rank || idx + 1,
-          topic: item.title,
-          hotValue: item.score || 0,
-          label: item.word_type || '',
-          url: item.link || ''
+          rank: idx + 1,
+          topic: note.display_title || note.title || '',
+          hotValue: (note.interact_info && note.interact_info.liked_count) || 0,
+          label: note.type || '',
+          url: 'https://www.xiaohongshu.com/explore/' + (note.note_id || '')
         };
       });
       console.log('  [小红书] 获取成功: ' + result.length + '条');
       return result;
     }
-    console.log('  [小红书] 接口返回异常');
+    console.log('  [小红书] 接口返回异常（cookie 可能失效或接口变更）');
     return [];
   } catch (e) {
     console.log('  [小红书] 获取失败: ' + e.message);
@@ -258,10 +299,10 @@ async function main() {
 
   console.log('\n========== 今日热榜汇总 ==========');
   console.log('- 微博: ' + data.weibo.length + '条');
-  console.log('- 知乎: ' + data.zhihu.length + '条');
+  console.log('- 知乎: ' + data.zhihu.length + '条（需 ZHI_HU_COOKIE）');
   console.log('- B站: ' + data.bilibili.length + '条');
   console.log('- 抖音: ' + data.douyin.length + '条');
-  console.log('- 小红书: ' + data.xiaohongshu.length + '条');
+  console.log('- 小红书: ' + data.xiaohongshu.length + '条（需 XHS_COOKIE）');
   console.log('================================\n');
 
   return data;
@@ -276,7 +317,8 @@ module.exports = {
   fetchBilibili: fetchBilibili,
   fetchDouyin: fetchDouyin,
   fetchXiaohongshu: fetchXiaohongshu,
-  ensureDirs: ensureDirs
+  ensureDirs: ensureDirs,
+  main: main
 };
 
 // 直接运行
